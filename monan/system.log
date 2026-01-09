@@ -1,0 +1,17 @@
+[2026-01-08 16:20:07,136] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2026-01-08 16:20:16,643] INFO django.server: "GET / HTTP/1.1" 302 0
+[2026-01-08 16:20:16,679] INFO django.server: "GET /accounts/login/?next=/ HTTP/1.1" 200 11045
+[2026-01-08 16:20:16,864] INFO django.server: "GET /static/css/style.css HTTP/1.1" 200 7927
+[2026-01-08 16:20:32,073] INFO django.server: "POST /accounts/login/ HTTP/1.1" 302 0
+[2026-01-08 16:20:32,113] INFO django.server: "GET / HTTP/1.1" 200 16231
+[2026-01-08 16:54:48,271] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2026-01-08 16:55:02,793] INFO django.server: "GET / HTTP/1.1" 200 16231
+[2026-01-08 16:55:02,837] INFO django.server: "GET /static/css/style.css HTTP/1.1" 304 0
+[2026-01-08 16:55:05,618] INFO django.server: "POST /accounts/logout/ HTTP/1.1" 302 0
+[2026-01-08 16:55:05,626] INFO django.server: "GET /accounts/login/ HTTP/1.1" 200 10819
+[2026-01-08 16:55:34,445] INFO django.server: "POST /accounts/login/ HTTP/1.1" 302 0
+[2026-01-08 16:55:34,461] INFO django.server: "GET / HTTP/1.1" 200 16231
+[2026-01-08 16:55:43,188] INFO django.server: "GET /reports/history/ HTTP/1.1" 200 12120
+[2026-01-08 16:55:57,360] INFO django.server: "GET / HTTP/1.1" 200 16231
+[2026-01-08 16:56:00,373] INFO django.server: "GET /reports/settings/ HTTP/1.1" 200 6277
+[2026-01-08 16:56:05,833] INFO django.server: "GET / HTTP/1.1" 200 16231

@@ -59,37 +59,41 @@ def dashboard(request):
 # UPLOAD DE ARQUIVOS (ZONA DE PERIGO)
 # Acesso restrito a Médico e Admin
 # ============================================================
+import uuid
+
 @login_required
 @can_upload 
 def upload_file(request):
-    # Verifica se a requisição é POST e se existe arquivo enviado
     if request.method == 'POST' and request.FILES.get('file'):
         uploaded_file = request.FILES['file']
 
-        # Extrai e normaliza a extensão do arquivo
+        # Validação rigorosa da extensão
         ext = os.path.splitext(uploaded_file.name)[1].lower()
+        allowed_extensions = ['.gdf', '.dta']
 
-        # Validação simples de formato permitido
-        if ext not in ['.gdf', '.dta']:
-            messages.error(request, "Formato inválido. Use .gdf ou .dta")
+        if ext not in allowed_extensions:
+            messages.error(
+                request,
+                "Formato inválido. Apenas arquivos .gdf ou .dta são permitidos."
+            )
             return redirect('upload_file')
-            
-        # Cria o registro do arquivo EEG no banco
-        eeg = EEGFile.objects.create(
+
+        # Renomeação segura do arquivo com UUID
+        new_filename = f"{uuid.uuid4()}{ext}"
+        uploaded_file.name = new_filename
+
+        # Criação do registro no banco de dados
+        EEGFile.objects.create(
             user=request.user,
             file=uploaded_file,
-            original_name=uploaded_file.name,
+            original_name=new_filename,
             size_bytes=uploaded_file.size,
-            status='pending'  # Status inicial do processamento
+            status='pending'
         )
 
-        # Feedback visual para o usuário
         messages.success(request, "Arquivo enviado com sucesso!")
-
-        # Redireciona para a tela de solicitação de análise
         return redirect('request_analysis')
 
-    # Caso GET, apenas renderiza o formulário de upload
     return render(request, 'upload.html')
 
 
@@ -113,43 +117,50 @@ def request_analysis(request):
 # ============================================================
 # EXECUÇÃO DA ANÁLISE (SIMULADA)
 # ============================================================
+from core.services.ml_api import run_eeg_analysis
+
 @login_required
 @can_upload
 def analyze_file(request, file_id):
-    # Obtém o arquivo pelo ID ou retorna 404 se não existir
     eeg_file = get_object_or_404(EEGFile, id=file_id)
-    
-    # Camada extra de segurança:
-    # impede que médicos analisem arquivos de outros usuários
+
+    # Segurança: médico só analisa os próprios arquivos
     if eeg_file.user != request.user and not request.user.profile.is_admin:
-         messages.error(request, "Você não tem permissão para analisar este arquivo.")
-         return redirect('dashboard')
+        messages.error(request, "Você não tem permissão para analisar este arquivo.")
+        return redirect('dashboard')
 
-    # --------------------------------------------------------
-    # SIMULAÇÃO DA IA (TEMPORÁRIA)
-    # --------------------------------------------------------
-    # A classificação e a confiança são geradas aleatoriamente
-    # enquanto a integração com o WEKA via CSI não existe.
-    classification = random.choice([True, False]) 
-    confidence = random.uniform(50, 99)
-    # --------------------------------------------------------
+    try:
+        # Caminho físico do arquivo no sistema
+        file_path = eeg_file.file.path
 
-    # Cria o registro da análise no banco
-    analysis = Analysis.objects.create(
-        eeg_file=eeg_file,
-        classification=classification,
-        confidence=confidence
-    )
-    
-    # Atualiza o status do arquivo após a análise
-    eeg_file.status = 'completed'
-    eeg_file.save()
-    
-    # Feedback de sucesso
-    messages.success(request, "Análise concluída.")
+        # Execução da IA (simulada ou WEKA futuramente)
+        result = run_eeg_analysis(file_path)
 
-    # Redireciona para a visualização do resultado
-    return redirect('result_view', analysis_id=analysis.id)
+        # Criação do registro da análise
+        analysis = Analysis.objects.create(
+            eeg_file=eeg_file,
+            classification=result["classification"],
+            confidence=result["confidence"]
+        )
+
+        # Atualiza status do arquivo
+        eeg_file.status = 'completed'
+        eeg_file.save()
+
+        messages.success(request, "Análise concluída com sucesso.")
+        return redirect('result_view', analysis_id=analysis.id)
+
+    except Exception as e:
+        # Em caso de erro, registra falha
+        eeg_file.status = 'error'
+        eeg_file.save()
+
+        messages.error(
+            request,
+            f"Erro ao processar a análise: {str(e)}"
+        )
+        return redirect('dashboard')
+
 
 
 # ============================================================
