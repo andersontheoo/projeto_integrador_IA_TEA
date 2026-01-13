@@ -117,33 +117,33 @@ def request_analysis(request):
 # ============================================================
 # EXECUÇÃO DA ANÁLISE (SIMULADA)
 # ============================================================
-from core.services.ml_api import run_eeg_analysis
+from core.services.ml_client import analyze_with_retry
 
 @login_required
 @can_upload
 def analyze_file(request, file_id):
     eeg_file = get_object_or_404(EEGFile, id=file_id)
 
-    # Segurança: médico só analisa os próprios arquivos
     if eeg_file.user != request.user and not request.user.profile.is_admin:
         messages.error(request, "Você não tem permissão para analisar este arquivo.")
         return redirect('dashboard')
 
     try:
-        # Caminho físico do arquivo no sistema
         file_path = eeg_file.file.path
 
-        # Execução da IA (simulada ou WEKA futuramente)
-        result = run_eeg_analysis(file_path)
+        # 🔹 CHAMADA ÚNICA E CORRETA
+        result = analyze_with_retry(file_path)
 
-        # Criação do registro da análise
+        # Padronização do retorno
+        if result.get("status") != "success":
+            raise RuntimeError(result.get("error", "Erro desconhecido na IA"))
+
         analysis = Analysis.objects.create(
             eeg_file=eeg_file,
-            classification=result["classification"],
-            confidence=result["confidence"]
+            classification=result.get("classification", "indefinido"),
+            confidence=result.get("confidence", 0.0)
         )
 
-        # Atualiza status do arquivo
         eeg_file.status = 'completed'
         eeg_file.save()
 
@@ -151,14 +151,10 @@ def analyze_file(request, file_id):
         return redirect('result_view', analysis_id=analysis.id)
 
     except Exception as e:
-        # Em caso de erro, registra falha
         eeg_file.status = 'error'
         eeg_file.save()
 
-        messages.error(
-            request,
-            f"Erro ao processar a análise: {str(e)}"
-        )
+        messages.error(request, f"Erro ao processar a análise: {str(e)}")
         return redirect('dashboard')
 
 
