@@ -1,39 +1,45 @@
+import subprocess
+import logging
 import os
-import random
 
-def run_eeg_analysis(file_path: str) -> dict:
+WEKA_TIMEOUT = 60
+
+logger = logging.getLogger(__name__)
+
+def analyze_with_retry(file_path: str) -> dict:
     """
-    Serviço de IA responsável por:
-    - Ler o arquivo físico (.gdf ou .dta)
-    - Processar os dados (simulado)
-    - Retornar classificação e confiança
-
-    Retorno:
-    {
-        "classification": bool,
-        "confidence": float
-    }
+    Executa a análise de um arquivo EEG usando WEKA.
+    Retorna resultado ou erro padronizado.
     """
+    try:
+        # Verifica se o arquivo existe
+        if not os.path.exists(file_path):
+            raise FileNotFoundError("Arquivo EEG não encontrado")
 
-    # -----------------------------
-    # Validação do arquivo físico
-    # -----------------------------
-    if not os.path.exists(file_path):
-        raise FileNotFoundError("Arquivo EEG não encontrado no sistema.")
+        # Comando básico para executar o WEKA
+        command = [
+            "java",
+            "-jar",
+            "weka.jar",
+            file_path
+        ]
 
-    ext = os.path.splitext(file_path)[1].lower()
-    if ext not in ['.gdf', '.dta']:
-        raise ValueError("Formato de arquivo não suportado para análise.")
+        # Executa o processo com timeout
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=WEKA_TIMEOUT,
+            check=True
+        )
 
-    # -------------------------------------------------
-    # SIMULAÇÃO DA IA (placeholder para WEKA via CSI)
-    # -------------------------------------------------
-    # Aqui futuramente será chamada a execução do WEKA:
-    # ex: subprocess.run([...])
-    classification = random.choice([True, False])
-    confidence = round(random.uniform(60.0, 99.5), 2)
+        return {
+            "status": "success",
+            "resultado": result.stdout.strip()
+        }
 
-    return {
-        "classification": classification,
-        "confidence": confidence
-    }
+    except Exception:
+        logger.exception("Erro ao analisar sinal de EEG")
+        return {
+            "error": "Falha na análise do sinal de EEG"
+        }
