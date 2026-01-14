@@ -5,7 +5,7 @@ import random
 from dotenv import load_dotenv
 load_dotenv()
 
-from services.ml_api import analyze_eeg
+from core.services.ml_api import analyze_eeg
 
 logger = logging.getLogger(__name__)
 load_dotenv()
@@ -45,7 +45,7 @@ def simulate_analysis(file_path: str) -> dict:
     logger.info("Análise simulada utilizada como fallback")
 
     return {
-        "result": result,
+        "classification": result,
         "confidence": round(confidence, 2),
         "source": "simulated"
     }
